@@ -1,0 +1,144 @@
+{
+  "entities": {
+    "UserProfile": {
+      "title": "UserProfile",
+      "description": "User profile and active workspace state",
+      "type": "object",
+      "properties": {
+        "userId": {
+          "type": "string",
+          "description": "Unique identifier of the user",
+          "maxLength": 128
+        },
+        "email": {
+          "type": "string",
+          "description": "User email address",
+          "maxLength": 256
+        },
+        "displayName": {
+          "type": "string",
+          "description": "User display name",
+          "maxLength": 120
+        },
+        "activeBookId": {
+          "type": "string",
+          "description": "Identifier of the currently selected KDP book project",
+          "maxLength": 128
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "Timestamp when the user profile was initialized"
+        },
+        "updatedAt": {
+          "type": "string",
+          "description": "Timestamp when the user profile was last updated"
+        }
+      },
+      "required": ["userId", "email", "createdAt", "updatedAt"]
+    },
+    "KdpBook": {
+      "title": "KdpBook",
+      "description": "Amazon KDP print-ready book publication project",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier of the book project",
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "userId": {
+          "type": "string",
+          "description": "Owner user UID",
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "bookType": {
+          "type": "string",
+          "description": "Genre classification of the book",
+          "maxLength": 50
+        },
+        "title": {
+          "type": "string",
+          "description": "Book title",
+          "maxLength": 200
+        },
+        "subtitle": {
+          "type": "string",
+          "description": "Book subtitle",
+          "maxLength": 300
+        },
+        "author": {
+          "type": "string",
+          "description": "Author pen name",
+          "maxLength": 120
+        },
+        "descriptionHtml": {
+          "type": "string",
+          "description": "Rich HTML formatted Amazon book description",
+          "maxLength": 4000
+        },
+        "targetAudience": {
+          "type": "string",
+          "description": "Intended reader demographic",
+          "maxLength": 200
+        },
+        "pageCount": {
+          "type": "number",
+          "description": "Total print page count (minimum 24, maximum 828)"
+        },
+        "listPriceUSD": {
+          "type": "number",
+          "description": "Suggested retail list price in USD"
+        },
+        "spineWidthInches": {
+          "type": "number",
+          "description": "Calculated spine thickness according to Amazon white paper formula"
+        },
+        "primaryColor": {
+          "type": "string",
+          "description": "Primary hex theme color",
+          "maxLength": 20
+        },
+        "accentColor": {
+          "type": "string",
+          "description": "Accent hex highlight color",
+          "maxLength": 20
+        },
+        "psychologyBadge": {
+          "type": "string",
+          "description": "Cover authority trust badge text",
+          "maxLength": 150
+        },
+        "bookDataJson": {
+          "type": "string",
+          "description": "Full serialized KDPBook JSON payload including page structure and specs",
+          "maxLength": 500000
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "Timestamp when the book was created"
+        },
+        "updatedAt": {
+          "type": "string",
+          "description": "Timestamp when the book was last modified"
+        }
+      },
+      "required": ["id", "userId", "title", "pageCount", "bookDataJson", "createdAt", "updatedAt"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": {
+        "$ref": "#/entities/UserProfile"
+      },
+      "description": "Stores user profiles and current project state"
+    },
+    "/books/{bookId}": {
+      "schema": {
+        "$ref": "#/entities/KdpBook"
+      },
+      "description": "Stores saved Amazon KDP books owned by authenticated users"
+    }
+  }
+}

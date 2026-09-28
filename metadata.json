@@ -1,0 +1,6 @@
+{
+  "name": "Amazon KDP Book Generator",
+  "description": "Complete Amazon KDP publishing suite. Generate print-ready interior PDFs, full-wrap covers with calculated spine width, and optimized metadata packages adhering strictly to Amazon specifications.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

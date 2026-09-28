@@ -1,0 +1,121 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Global Safety Net: Default-deny catch-all
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Helper functions
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isAdmin() {
+      return isSignedIn() &&
+        request.auth.token.email == 'michael@botvibe.ai' &&
+        request.auth.token.email_verified == true;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() > 0 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    // Validation helper for UserProfile
+    function isValidUserProfile(data) {
+      return data.userId is string && data.userId.size() <= 128 &&
+             data.email is string && data.email.size() <= 256 &&
+             (!('displayName' in data) || (data.displayName is string && data.displayName.size() <= 120)) &&
+             (!('activeBookId' in data) || (data.activeBookId is string && data.activeBookId.size() <= 128)) &&
+             data.createdAt is string &&
+             data.updatedAt is string;
+    }
+
+    // Validation helper for KdpBook
+    function isValidKdpBook(data) {
+      return data.id is string && data.id.size() <= 128 &&
+             data.userId is string && data.userId.size() <= 128 &&
+             data.userId == request.auth.uid &&
+             data.title is string && data.title.size() > 0 && data.title.size() <= 200 &&
+             data.pageCount is number && data.pageCount >= 24 && data.pageCount <= 828 &&
+             data.bookDataJson is string && data.bookDataJson.size() <= 500000 &&
+             (!('subtitle' in data) || (data.subtitle is string && data.subtitle.size() <= 300)) &&
+             (!('author' in data) || (data.author is string && data.author.size() <= 120)) &&
+             (!('bookType' in data) || (data.bookType is string && data.bookType.size() <= 50)) &&
+             (!('listPriceUSD' in data) || (data.listPriceUSD is number)) &&
+             (!('spineWidthInches' in data) || (data.spineWidthInches is number)) &&
+             (!('primaryColor' in data) || (data.primaryColor is string && data.primaryColor.size() <= 20)) &&
+             (!('accentColor' in data) || (data.accentColor is string && data.accentColor.size() <= 20)) &&
+             (!('psychologyBadge' in data) || (data.psychologyBadge is string && data.psychologyBadge.size() <= 150)) &&
+             data.createdAt is string &&
+             data.updatedAt is string;
+    }
+
+    // Users Collection
+    match /users/{userId} {
+      allow get: if isOwner(userId) || isAdmin();
+      allow list: if false; // No blanket listing of user profiles
+
+      allow create: if isOwner(userId) &&
+        isValidId(userId) &&
+        isValidUserProfile(incoming()) &&
+        incoming().userId == request.auth.uid &&
+        incoming().keys().hasAll(['userId', 'email', 'createdAt', 'updatedAt']) &&
+        incoming().keys().hasOnly(['userId', 'email', 'displayName', 'activeBookId', 'createdAt', 'updatedAt']);
+
+      allow update: if (isOwner(userId) || isAdmin()) &&
+        isValidId(userId) &&
+        isValidUserProfile(incoming()) &&
+        incoming().userId == existing().userId &&
+        incoming().createdAt == existing().createdAt &&
+        incoming().diff(existing()).affectedKeys().hasOnly(['email', 'displayName', 'activeBookId', 'updatedAt']);
+
+      allow delete: if isAdmin();
+    }
+
+    // Books Collection
+    match /books/{bookId} {
+      // Single doc read
+      allow get: if (isSignedIn() && resource.data.userId == request.auth.uid) || isAdmin();
+
+      // Query listing explicitly enforces userId match on resource.data
+      allow list: if isSignedIn() && (resource.data.userId == request.auth.uid || isAdmin());
+
+      allow create: if isSignedIn() &&
+        isValidId(bookId) &&
+        isValidKdpBook(incoming()) &&
+        incoming().id == bookId &&
+        incoming().userId == request.auth.uid &&
+        incoming().keys().hasAll(['id', 'userId', 'title', 'pageCount', 'bookDataJson', 'createdAt', 'updatedAt']);
+
+      allow update: if isSignedIn() &&
+        isValidId(bookId) &&
+        isValidKdpBook(incoming()) &&
+        (existing().userId == request.auth.uid || isAdmin()) &&
+        incoming().userId == existing().userId &&
+        incoming().createdAt == existing().createdAt &&
+        incoming().diff(existing()).affectedKeys().hasOnly([
+          'title', 'subtitle', 'author', 'bookType', 'descriptionHtml', 'targetAudience',
+          'pageCount', 'listPriceUSD', 'spineWidthInches', 'primaryColor', 'accentColor',
+          'psychologyBadge', 'bookDataJson', 'updatedAt'
+        ]);
+
+      allow delete: if isSignedIn() &&
+        isValidId(bookId) &&
+        (resource.data.userId == request.auth.uid || isAdmin());
+    }
+  }
+}
